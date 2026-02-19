@@ -1,0 +1,39 @@
+name: Label-based Issue Comments
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  comment-on-label:
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'documentation' || github.event.label.name == 'wontfix' || github.event.label.name == 'enhancement'
+    steps:
+      - name: Post comment based on label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const label = context.payload.label.name;
+            let comment;
+            
+            switch(label) {
+              case 'documentation':
+                comment = 'Thank you for flagging this documentation issue. We will update it soon.';
+                break;
+              case 'wontfix':
+                comment = 'After review, we have decided not to address this issue at this time.';
+                break;
+              case 'enhancement':
+                comment = 'Thanks for the enhancement suggestion! We appreciate your input.';
+                break;
+            }
+            
+            if (comment) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
