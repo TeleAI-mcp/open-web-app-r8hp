@@ -1,4 +1,4 @@
-name: Label-based Issue Comments
+name: Label-based Issue Automation
 
 on:
   issues:
@@ -7,33 +7,102 @@ on:
 jobs:
   comment-on-label:
     runs-on: ubuntu-latest
-    if: github.event.label.name == 'documentation' || github.event.label.name == 'wontfix' || github.event.label.name == 'enhancement'
+    permissions:
+      issues: write
     steps:
-      - name: Post comment based on label
+      - name: Comment on documentation label
+        if: github.event.label.name == 'documentation'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const label = context.payload.label.name;
-            let comment;
+            const issueNumber = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const labelName = 'documentation';
             
-            switch(label) {
-              case 'documentation':
-                comment = 'Thank you for flagging this documentation issue. We will update it soon.';
-                break;
-              case 'wontfix':
-                comment = 'After review, we have decided not to address this issue at this time.';
-                break;
-              case 'enhancement':
-                comment = 'Thanks for the enhancement suggestion! We appreciate your input.';
-                break;
-            }
+            // Check if we've already commented for this label
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: issueNumber
+            });
             
-            if (comment) {
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
+            const alreadyCommented = comments.data.some(comment => 
+              comment.body.includes('Thank you for flagging this documentation issue')
+            );
+            
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: 'Thank you for flagging this documentation issue. We will update it soon.'
               });
+              console.log(`Posted documentation comment on issue #${issueNumber}`);
+            } else {
+              console.log(`Already commented on issue #${issueNumber} for documentation label`);
+            }
+
+      - name: Comment on wontfix label
+        if: github.event.label.name == 'wontfix'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Check if we've already commented for this label
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: issueNumber
+            });
+            
+            const alreadyCommented = comments.data.some(comment => 
+              comment.body.includes('After review, we have decided not to address this issue')
+            );
+            
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: 'After review, we have decided not to address this issue at this time.'
+              });
+              console.log(`Posted wontfix comment on issue #${issueNumber}`);
+            } else {
+              console.log(`Already commented on issue #${issueNumber} for wontfix label`);
+            }
+
+      - name: Comment on enhancement label
+        if: github.event.label.name == 'enhancement'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Check if we've already commented for this label
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: issueNumber
+            });
+            
+            const alreadyCommented = comments.data.some(comment => 
+              comment.body.includes('Thanks for the enhancement suggestion')
+            );
+            
+            if (!alreadyCommented) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                body: 'Thanks for the enhancement suggestion! We appreciate your input.'
+              });
+              console.log(`Posted enhancement comment on issue #${issueNumber}`);
+            } else {
+              console.log(`Already commented on issue #${issueNumber} for enhancement label`);
             }
